@@ -1,0 +1,6 @@
+[submodule "apps/mobile/Azkar"]
+	path = apps/mobile/Azkar
+	url = git@github.com:producitivity-os/Azkar.git
+[submodule "packages/canvas"]
+	path = packages/canvas
+	url = git@github.com:producitivity-os/endless-canvas.git

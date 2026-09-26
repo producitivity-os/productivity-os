@@ -1,0 +1,16 @@
+export const workflowNodeTheme = {
+  blue: 0x3b82f6,
+  ink: 0x172033,
+  muted: 0x64748b,
+  border: 0xd1d5db,
+  white: 0xffffff,
+  surface: 0xffffff,
+  subtleSurface: 0xf8fafc,
+  divider: 0xe2e8f0,
+  unavailableSurface: 0xf1f3f5,
+  unavailableBorder: 0xcbd0d6,
+  fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', system-ui, sans-serif",
+  completedSurface: 0xf1f3f5,
+  completedBorder: 0xcbd0d6,
+  completedText: 0x8a94a3,
+} as const;
