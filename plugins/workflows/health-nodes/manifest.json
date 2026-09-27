@@ -1,0 +1,15 @@
+{
+  "id": "workflows.health-nodes",
+  "name": "Nutrition Nodes",
+  "version": "3.0.0",
+  "description": "Log food and water from a workflow.",
+  "defaultInstalled": true,
+  "marketplace": true,
+  "app": {
+    "id": "nutrition",
+    "name": "Nutrition",
+    "icon": "droplets",
+    "launchTarget": "nutrition",
+    "palette": { "surface": "#ffffff", "border": "#cbd5e1", "foreground": "#172033", "mutedForeground": "#64748b" }
+  }
+}

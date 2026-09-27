@@ -1,0 +1,12 @@
+{
+  "name": "@productivity-os/workflow-revise-nodes",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "peerDependencies": {
+    "@productivity-os/workflow-plugin-sdk": "workspace:*",
+    "@productivity-os/shared-ui": "workspace:*",
+    "pixi.js": "^8.16.0",
+    "react": "^19.1.0"
+  }
+}

@@ -1,0 +1,27 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "crates/core",
+    "crates/config",
+    "crates/database",
+    "crates/client",
+    "crates/revision-scheduler",
+    "services/data-service",
+    "apps/desktop/Workflows/src-tauri",
+    "apps/desktop/Notes/src-tauri",
+    "apps/desktop/Revise/src-tauri",
+    "apps/desktop/Quran/src-tauri",
+    "apps/desktop/Reminders/src-tauri",
+    "apps/desktop/Nutrition/src-tauri",
+]
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

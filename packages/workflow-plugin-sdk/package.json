@@ -1,0 +1,24 @@
+{
+  "name": "@productivity-os/workflow-plugin-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "lucide-react": "^1.33.0",
+    "pixi.js": "^8.0.0",
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "lucide-react": "^1.33.0",
+    "pixi.js": "^8.0.0",
+    "react": "^19.2.8",
+    "typescript": "~6.0.2"
+  }
+}

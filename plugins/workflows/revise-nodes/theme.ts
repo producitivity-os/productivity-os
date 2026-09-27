@@ -1,0 +1,72 @@
+import type {
+  WorkflowNodeButtonTheme,
+  WorkflowNodeProgressTheme,
+  WorkflowPluginPalette,
+} from "@productivity-os/workflow-plugin-sdk";
+
+export const reviseNodeTheme = {
+  surface: 0xffffff,
+  accent: 0xf97316,
+  border: 0xcbd5e1,
+  foreground: 0x172033,
+  strongForeground: 0x172033,
+  mutedForeground: 0x64748b,
+  buttonSurface: 0xf1f5f9,
+  buttonBorder: 0xcbd5e1,
+  typography: {
+    fontFamily: "Inter Variable, Inter, sans-serif",
+    titleSize: 15,
+    titleWeight: "bold",
+    detailSize: 9,
+    detailWeight: "normal",
+    progressSize: 10,
+    progressWeight: "bold",
+  },
+  counters: {
+    due: 0x64748b,
+    correct: 0x16a34a,
+    wrong: 0xdc2626,
+    dueCss: "#64748b",
+    correctCss: "#16a34a",
+    wrongCss: "#dc2626",
+    size: 18,
+    weight: "bold",
+    columnWidth: 38,
+    rightInset: 14,
+  },
+  progress: {
+    track: 0xffffff,
+    fill: 0xf97316,
+    invertedForeground: 0xffffff,
+  } satisfies WorkflowNodeProgressTheme,
+  button: {
+    background: 0xf1f5f9,
+    border: 0xcbd5e1,
+    foreground: 0x172033,
+    hoverBackground: 0xffffff,
+    hoverBorder: 0xf97316,
+    hoverForeground: 0x172033,
+    disabledBackground: 0xf1f5f9,
+    disabledBorder: 0xcbd5e1,
+    disabledForeground: 0x94a3b8,
+    completedBackground: 0xf1f5f9,
+    completedBorder: 0xcbd5e1,
+    completedForeground: 0x172033,
+    completedAlpha: 1,
+  } satisfies WorkflowNodeButtonTheme,
+  runningButton: {
+    background: 0xf97316,
+    border: 0xf97316,
+    foreground: 0xffffff,
+    hoverBackground: 0xea580c,
+    hoverBorder: 0xea580c,
+    hoverForeground: 0xffffff,
+  } satisfies WorkflowNodeButtonTheme,
+} as const;
+
+export const revisePalette = {
+  surface: "#ffffff",
+  border: "#cbd5e1",
+  foreground: "#172033",
+  mutedForeground: "#64748b",
+} as const satisfies WorkflowPluginPalette;

@@ -1,0 +1,15 @@
+{
+  "id": "workflows.quran-nodes",
+  "name": "Quran Nodes",
+  "version": "2.0.0",
+  "description": "Record, play, and punch in Quran revision attempts from a workflow.",
+  "app": {
+    "id": "quran",
+    "name": "Quran",
+    "icon": "audio-lines",
+    "launchTarget": "quran",
+    "palette": { "surface": "#ffffff", "border": "#cbd5e1", "foreground": "#172033", "mutedForeground": "#64748b" }
+  },
+  "marketplace": true,
+  "defaultInstalled": true
+}

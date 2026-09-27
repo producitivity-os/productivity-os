@@ -1,0 +1,9 @@
+[package]
+name = "revision-scheduler"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+app-core = { path = "../core" }
+fsrs = "6.6.2"
+thiserror = "2"

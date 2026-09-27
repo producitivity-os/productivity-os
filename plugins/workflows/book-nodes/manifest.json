@@ -1,0 +1,15 @@
+{
+  "id": "workflows.book-nodes",
+  "name": "Book Nodes",
+  "version": "1.0.0",
+  "description": "Log and time reading sessions using Books from Notes.",
+  "app": {
+    "id": "books",
+    "name": "Books",
+    "icon": "notebook-tabs",
+    "launchTarget": "notes",
+    "palette": { "surface": "#ffffff", "border": "#cbd5e1", "foreground": "#172033", "mutedForeground": "#64748b" }
+  },
+  "marketplace": true,
+  "defaultInstalled": true
+}

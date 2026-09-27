@@ -1,0 +1,63 @@
+{
+  "name": "productivity-os",
+  "private": true,
+  "workspaces": [
+    "apps/desktop/*",
+    "apps/mobile/*",
+    "packages/*",
+    "packages/canvas/playground"
+  ],
+  "packageManager": "yarn@4.18.0",
+  "scripts": {
+    "workflows:dev": "yarn workspace workflows dev",
+    "workflows:build": "yarn workspace workflows build",
+    "workflows:tauri:dev": "yarn workspace workflows tauri dev",
+    "workflows:tauri:build": "yarn workspace workflows tauri build",
+    "workflows:test": "node --experimental-strip-types --test packages/canvas/tests/*.test.ts apps/Workflows/tests/*.test.ts",
+    "canvas:dev": "yarn workflows:dev",
+    "canvas:build": "yarn workflows:build",
+    "canvas:tauri:dev": "yarn workflows:tauri:dev",
+    "canvas:tauri:build": "yarn workflows:tauri:build",
+    "canvas:test": "yarn workflows:test",
+    "notes:dev": "yarn workspace notes dev",
+    "notes:build": "yarn workspace notes build",
+    "notes:tauri:dev": "yarn workspace notes tauri dev",
+    "notes:tauri:build": "yarn workspace notes tauri build",
+    "notes:test": "node --experimental-strip-types --test apps/Notes/tests/*.test.ts",
+    "revise:build": "yarn workspace revise build",
+    "revise:dev": "yarn workspace revise dev",
+    "revise:tauri:dev": "yarn workspace revise tauri dev",
+    "revise:tauri:build": "yarn workspace revise tauri build",
+    "revise:test": "node --experimental-strip-types --test apps/Revise/tests/*.test.ts",
+    "quran:dev": "yarn workspace quran dev",
+    "quran:build": "yarn workspace quran build",
+    "quran:test": "yarn workspace quran test",
+    "quran:tauri:dev": "yarn workspace quran tauri dev",
+    "quran:tauri:build": "yarn workspace quran tauri build",
+    "quran-revision:dev": "yarn quran:dev",
+    "quran-revision:build": "yarn quran:build",
+    "quran-revision:test": "yarn quran:test",
+    "quran-revision:tauri:dev": "yarn quran:tauri:dev",
+    "quran-revision:tauri:build": "yarn quran:tauri:build",
+    "reminders:dev": "yarn workspace reminders dev",
+    "reminders:build": "yarn workspace reminders build",
+    "reminders:test": "yarn workspace reminders test",
+    "reminders:tauri:dev": "yarn workspace reminders tauri dev",
+    "reminders:tauri:build": "yarn workspace reminders tauri build",
+    "nutrition:dev": "yarn workspace nutrition dev",
+    "nutrition:build": "yarn workspace nutrition build",
+    "nutrition:test": "yarn workspace nutrition test",
+    "nutrition:tauri:dev": "yarn workspace nutrition tauri dev",
+    "nutrition:tauri:build": "yarn workspace nutrition tauri build",
+    "desktop:dev": "concurrently --kill-others-on-fail --names data,workflows,revise,quran,notes --prefix-colors gray,blue,yellow,magenta,cyan \"cargo run -p data-service\" \"yarn workflows:tauri:dev\" \"yarn workspace revise tauri dev -- -- --activity-host\" \"yarn workspace quran tauri dev -- -- --activity-host\" \"yarn workspace notes tauri dev -- -- --activity-host\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.8.3",
+    "prettier-plugin-tailwindcss": "^0.8.0",
+    "typescript": "~6"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

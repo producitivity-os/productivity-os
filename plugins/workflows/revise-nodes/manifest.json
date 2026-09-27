@@ -1,0 +1,15 @@
+{
+  "id": "workflows.revise-nodes",
+  "name": "Revise Nodes",
+  "version": "2.0.0",
+  "description": "Complete due flashcards from a workflow.",
+  "app": {
+    "id": "revise",
+    "name": "Revise",
+    "icon": "brain-circuit",
+    "launchTarget": "revise",
+    "palette": { "surface": "#ffffff", "border": "#cbd5e1", "foreground": "#172033", "mutedForeground": "#64748b" }
+  },
+  "marketplace": true,
+  "defaultInstalled": true
+}

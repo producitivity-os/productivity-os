@@ -1,0 +1,7 @@
+- implement persistence for canvas via a datalayer and sqlite
+- implement asset manager for media, expose media in home page in canvas, for media associated with canvas
+- implement plugin system, make a plugin template and structure, make 2dgrapher plugin to begin with, then 3d
+- add flowchart making shapes and shape library
+- make flashcards app, make it consume canvas app
+- migrate all canvases from previous canvas app
+- implement dark mode that encompasses the cards and elements

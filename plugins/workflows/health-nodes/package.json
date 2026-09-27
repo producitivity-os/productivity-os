@@ -1,0 +1,6 @@
+{
+  "name": "@productivity-os/plugin-workflows-nutrition-nodes",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module"
+}

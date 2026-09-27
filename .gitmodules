@@ -4,3 +4,18 @@
 [submodule "packages/canvas"]
 	path = packages/canvas
 	url = git@github.com:producitivity-os/endless-canvas.git
+[submodule "apps/desktop/Nutrition"]
+	path = apps/desktop/Nutrition
+	url = git@github.com:producitivity-os/Nutrition.git
+[submodule "apps/desktop/Notes"]
+	path = apps/desktop/Notes
+	url = git@github.com:producitivity-os/Notes.git
+[submodule "apps/desktop/Quran"]
+	path = apps/desktop/Quran
+	url = git@github.com:producitivity-os/Quran.git
+[submodule "apps/desktop/Reminders"]
+	path = apps/desktop/Reminders
+	url = git@github.com:producitivity-os/Reminders.git
+[submodule "apps/desktop/Revise"]
+	path = apps/desktop/Revise
+	url = git@github.com:producitivity-os/Revise.git

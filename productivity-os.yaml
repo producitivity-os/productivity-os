@@ -1,0 +1,17 @@
+version: 1
+
+data_service:
+  socket_path: "/tmp/productivity-os-data.sock"
+  database_path: ".data/productivity-os.sqlite3"
+  media_path: ".data/media"
+  max_request_bytes: 33554432
+  max_connections: 4
+  busy_timeout_ms: 5000
+
+canvas:
+  autosave_debounce_ms: 750
+  seed_demo_data: true
+
+quran:
+  environment: "prelive"
+  mushaf_id: 1

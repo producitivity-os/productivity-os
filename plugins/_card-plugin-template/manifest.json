@@ -1,0 +1,11 @@
+{
+  "id": "example.card-plugin",
+  "name": "Card Plugin Template",
+  "version": "0.1.0",
+  "marketplace": false,
+  "toolbarIcon": "Puzzle",
+  "propertiesPanel": "editor",
+  "cardType": "example",
+  "schemaVersion": 2,
+  "defaultDimensions": { "width": 320, "height": 180 }
+}
