@@ -2,11 +2,11 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use app_core::{
     CanvasType, ReviewRevisionCardInput, ReviewRevisionSessionCardInput, RevisionActivityDay,
-    RevisionCard, RevisionCardKind, RevisionCardQuery, RevisionDashboard, RevisionDashboardBucket,
-    RevisionDashboardPoint, RevisionDashboardQuery, RevisionDeckProgress, RevisionDeckSummary,
-    RevisionForecastPoint, RevisionIntervalBucket, RevisionRating, RevisionScheduleResult,
-    RevisionSessionOrigin, RevisionSessionReviewResult, RevisionSessionRun, RevisionSessionStatus,
-    RevisionSourceReference, SaveCanvasInput, StartRevisionSessionInput,
+    RevisionCard, RevisionCardKind, RevisionCardQuery, RevisionCardTier, RevisionDashboard,
+    RevisionDashboardBucket, RevisionDashboardPoint, RevisionDashboardQuery, RevisionDeckProgress,
+    RevisionDeckSummary, RevisionForecastPoint, RevisionIntervalBucket, RevisionRating,
+    RevisionScheduleResult, RevisionSessionOrigin, RevisionSessionReviewResult, RevisionSessionRun,
+    RevisionSessionStatus, RevisionSourceReference, SaveCanvasInput, StartRevisionSessionInput,
 };
 use revision_scheduler::{RevisionScheduler, StoredMemoryState};
 use serde_json::Value;
@@ -35,23 +35,20 @@ impl Database {
             if object.object_type != "card" {
                 continue;
             }
-            if is_revision_card(&object.payload) {
-                questions.insert(
-                    object.id.clone(),
-                    QuestionCard {
-                        id: object.id.clone(),
-                        valid: valid_revision_card(&object.payload),
-                    },
-                );
-            } else {
-                facts.insert(
-                    object.id.clone(),
-                    RevisionSourceReference {
-                        object_id: object.id.clone(),
-                        label: fact_label(&object.payload),
-                    },
-                );
-            }
+            questions.insert(
+                object.id.clone(),
+                QuestionCard {
+                    id: object.id.clone(),
+                    valid: true,
+                },
+            );
+            facts.insert(
+                object.id.clone(),
+                RevisionSourceReference {
+                    object_id: object.id.clone(),
+                    label: fact_label(&object.payload),
+                },
+            );
         }
 
         let mut sources = HashMap::<String, Vec<RevisionSourceReference>>::new();
@@ -175,11 +172,37 @@ impl Database {
                     object_id: card_id.clone(),
                     source,
                 })?;
-            let values = question_values(&payload);
-            let kind = match values.get("revisionKind").and_then(Value::as_str) {
-                Some("cloze") => RevisionCardKind::Cloze,
-                _ => RevisionCardKind::Basic,
-            };
+            let document_id: String = row.get("document_id");
+            let mut projected = revision_tiers(&payload);
+            let preview_rows = sqlx::query(
+                "SELECT tier_id, tier_revision, data_url FROM card_tier_previews WHERE document_id=? AND card_id=?",
+            )
+            .bind(&document_id)
+            .bind(&card_id)
+            .fetch_all(&self.pool)
+            .await?;
+            for preview in preview_rows {
+                let tier_id: String = preview.get("tier_id");
+                let revision: i64 = preview.get("tier_revision");
+                if let Some(tier) = projected
+                    .iter_mut()
+                    .find(|tier| tier.tier.id == tier_id && tier.revision == revision)
+                {
+                    tier.tier.preview_data_url = Some(preview.get("data_url"));
+                }
+            }
+            let tiers: Vec<RevisionCardTier> =
+                projected.into_iter().map(|tier| tier.tier).collect();
+            let front = tiers
+                .first()
+                .map(|tier| tier.content.clone())
+                .unwrap_or_default();
+            let back = tiers
+                .iter()
+                .skip(1)
+                .map(|tier| tier.content.as_str())
+                .collect::<Vec<_>>()
+                .join("\n\n");
             let sources = serde_json::from_str(&row.get::<String, _>("source_refs_json")).map_err(
                 |source| DatabaseError::InvalidObjectJson {
                     object_id: card_id.clone(),
@@ -187,15 +210,16 @@ impl Database {
                 },
             )?;
             cards.push(RevisionCard {
-                notebook_id: row.get("document_id"),
+                notebook_id: document_id,
                 notebook_title: row.get("document_title"),
                 layer_id: row.get("layer_id"),
                 layer_name: row.get("layer_name"),
                 card_id,
-                kind,
-                front: string_field(values, "front"),
-                back: string_field(values, "back"),
-                cloze: string_field(values, "cloze"),
+                kind: RevisionCardKind::Basic,
+                front,
+                back,
+                cloze: String::new(),
+                tiers,
                 sources,
                 due_at: row.get("due_at"),
                 last_review_at: row.get("last_review_at"),
@@ -814,31 +838,141 @@ async fn review_revision_card_in_transaction(
     })
 }
 
-fn is_revision_card(payload: &Value) -> bool {
-    payload.get("type").and_then(Value::as_str) == Some("card")
-        && (payload.get("kind").and_then(Value::as_str) == Some("revision")
-            || payload.get("kind").and_then(Value::as_str) == Some("plugin")
-                && payload.get("pluginId").and_then(Value::as_str) == Some("notes.question-card"))
-}
-
-fn valid_revision_card(payload: &Value) -> bool {
-    let values = question_values(payload);
-    if values.get("revisionKind").and_then(Value::as_str) != Some("cloze") {
-        return !string_field(values, "front").trim().is_empty()
-            && !string_field(values, "back").trim().is_empty();
-    }
-    let source = values
-        .get("cloze")
-        .and_then(Value::as_str)
-        .unwrap_or_default();
-    source.contains("{{c") && source.contains("::") && source.contains("}}")
-}
-
 fn question_values(payload: &Value) -> &Value {
     if payload.get("kind").and_then(Value::as_str) == Some("plugin") {
         payload.get("pluginData").unwrap_or(payload)
     } else {
         payload
+    }
+}
+
+struct ProjectedTier {
+    tier: RevisionCardTier,
+    revision: i64,
+}
+
+fn revision_tiers(payload: &Value) -> Vec<ProjectedTier> {
+    if let Some(tiers) = payload.get("tiers").and_then(Value::as_array) {
+        let projected: Vec<_> = tiers
+            .iter()
+            .enumerate()
+            .map(|(index, tier)| {
+                let mut content = elements_text(tier.get("elements").unwrap_or(&Value::Null));
+                if index == 0 && content.trim().is_empty() {
+                    content = specialized_card_text(payload);
+                }
+                ProjectedTier {
+                    revision: tier
+                        .get("revision")
+                        .and_then(Value::as_i64)
+                        .unwrap_or_default(),
+                    tier: RevisionCardTier {
+                        id: tier
+                            .get("id")
+                            .and_then(Value::as_str)
+                            .unwrap_or(if index == 0 { "front" } else { "tier" })
+                            .to_owned(),
+                        name: tier
+                            .get("name")
+                            .and_then(Value::as_str)
+                            .unwrap_or(if index == 0 { "Front" } else { "Tier" })
+                            .to_owned(),
+                        content,
+                        preview_data_url: None,
+                    },
+                }
+            })
+            .collect();
+        if !projected.is_empty() {
+            return projected;
+        }
+    }
+
+    let values = question_values(payload);
+    if payload.get("kind").and_then(Value::as_str) == Some("revision")
+        || payload.get("pluginId").and_then(Value::as_str) == Some("notes.question-card")
+    {
+        let is_cloze = values.get("revisionKind").and_then(Value::as_str) == Some("cloze");
+        let (front, back) = if is_cloze {
+            crate::legacy_cloze_tiers(&string_field(values, "cloze"))
+        } else {
+            (string_field(values, "front"), string_field(values, "back"))
+        };
+        return vec![
+            projected_tier("front", "Front", front),
+            projected_tier("back", "Back", back),
+        ];
+    }
+
+    let content = specialized_card_text(payload);
+    vec![projected_tier("front", "Front", content)]
+}
+
+fn specialized_card_text(payload: &Value) -> String {
+    match payload.get("kind").and_then(Value::as_str) {
+        Some("markdown") => string_field(payload, "markdown"),
+        Some("plugin") => value_text(payload.get("pluginData").unwrap_or(&Value::Null)),
+        Some("template") => value_text(payload.get("templateValues").unwrap_or(&Value::Null)),
+        _ => elements_text(payload.get("elements").unwrap_or(&Value::Null)),
+    }
+}
+
+fn projected_tier(id: &str, name: &str, content: String) -> ProjectedTier {
+    ProjectedTier {
+        revision: 0,
+        tier: RevisionCardTier {
+            id: id.to_owned(),
+            name: name.to_owned(),
+            content,
+            preview_data_url: None,
+        },
+    }
+}
+
+fn elements_text(value: &Value) -> String {
+    let Some(elements) = value.as_array() else {
+        return String::new();
+    };
+    elements
+        .iter()
+        .filter_map(|element| {
+            if element.get("type").and_then(Value::as_str) == Some("text") {
+                return element
+                    .get("text")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned);
+            }
+            if element.get("type").and_then(Value::as_str) == Some("card") {
+                return revision_tiers(element)
+                    .first()
+                    .map(|tier| tier.tier.content.clone());
+            }
+            element
+                .get("name")
+                .and_then(Value::as_str)
+                .map(str::to_owned)
+        })
+        .filter(|value| !value.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn value_text(value: &Value) -> String {
+    match value {
+        Value::String(value) => value.clone(),
+        Value::Array(values) => values
+            .iter()
+            .map(value_text)
+            .filter(|v| !v.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n"),
+        Value::Object(values) => values
+            .values()
+            .map(value_text)
+            .filter(|v| !v.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n"),
+        _ => String::new(),
     }
 }
 
@@ -892,6 +1026,20 @@ fn revision_local_date(timestamp: i64, utc_offset_minutes: i32) -> String {
 }
 
 fn fact_label(payload: &Value) -> String {
+    if let Some(content) = revision_tiers(payload)
+        .first()
+        .map(|tier| tier.tier.content.trim())
+        .filter(|content| !content.is_empty())
+    {
+        return content
+            .lines()
+            .next()
+            .unwrap_or(content)
+            .trim_start_matches(['#', '-', '*', ' '])
+            .chars()
+            .take(80)
+            .collect();
+    }
     if let Some(markdown) = payload.get("markdown").and_then(Value::as_str) {
         if let Some(line) = markdown
             .lines()

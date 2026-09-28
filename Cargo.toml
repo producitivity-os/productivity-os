@@ -8,7 +8,6 @@ members = [
     "crates/client",
     "crates/revision-scheduler",
     "services/data-service",
-    "apps/desktop/Workflows/src-tauri",
     "apps/desktop/Notes/src-tauri",
     "apps/desktop/Revise/src-tauri",
     "apps/desktop/Quran/src-tauri",

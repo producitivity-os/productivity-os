@@ -184,6 +184,19 @@ impl DataClient {
         }
     }
 
+    pub async fn save_card_tier_previews(
+        &self,
+        previews: Vec<app_core::SaveCardTierPreviewInput>,
+    ) -> Result<bool, ClientError> {
+        match self
+            .request(Request::SaveCardTierPreviews { previews })
+            .await?
+        {
+            Response::Seeded(value) => Ok(value),
+            _ => Err(ClientError::UnexpectedResponse),
+        }
+    }
+
     pub async fn seed_canvases(&self, inputs: Vec<SaveCanvasInput>) -> Result<bool, ClientError> {
         match self.request(Request::SeedCanvases { inputs }).await? {
             Response::Seeded(value) => Ok(value),

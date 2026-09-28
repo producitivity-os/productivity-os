@@ -6650,23 +6650,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "workflows"
-version = "0.1.0"
-dependencies = [
- "app-config",
- "app-core",
- "data-client",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tokio",
-]
-
-[[package]]
 name = "writeable"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"

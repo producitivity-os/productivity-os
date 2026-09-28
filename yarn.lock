@@ -2399,7 +2399,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@productivity-os/workflow-plugin-sdk@workspace:*, @productivity-os/workflow-plugin-sdk@workspace:packages/workflow-plugin-sdk":
+"@productivity-os/workflow-plugin-sdk@workspace:packages/workflow-plugin-sdk":
   version: 0.0.0-use.local
   resolution: "@productivity-os/workflow-plugin-sdk@workspace:packages/workflow-plugin-sdk"
   dependencies:
@@ -4783,7 +4783,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-dom@npm:^19, @types/react-dom@npm:^19.1.7":
+"@types/react-dom@npm:^19.1.7":
   version: 19.3.0
   resolution: "@types/react-dom@npm:19.3.0"
   peerDependencies:
@@ -4810,7 +4810,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:*, @types/react@npm:^19, @types/react@npm:^19.1.10":
+"@types/react@npm:*, @types/react@npm:^19.1.10":
   version: 19.3.0
   resolution: "@types/react@npm:19.3.0"
   dependencies:
@@ -6110,13 +6110,6 @@ __metadata:
   version: 0.7.2
   resolution: "cookie@npm:0.7.2"
   checksum: 10c0/9596e8ccdbf1a3a88ae02cf5ee80c1c50959423e1022e4e60b91dd87c622af1da309253d8abdb258fb5e3eacb4f08e579dc58b4897b8087574eee0fd35dfa5d2
-  languageName: node
-  linkType: hard
-
-"cookie@npm:^1.0.1":
-  version: 1.1.1
-  resolution: "cookie@npm:1.1.1"
-  checksum: 10c0/79c4ddc0fcad9c4f045f826f42edf54bcc921a29586a4558b0898277fa89fb47be95bc384c2253f493af7b29500c830da28341274527328f18eba9f58afa112c
   languageName: node
   linkType: hard
 
@@ -9715,8 +9708,8 @@ __metadata:
     "@tauri-apps/plugin-dialog": "npm:^2.7.2"
     "@tauri-apps/plugin-opener": "npm:^2"
     "@types/node": "npm:^24"
-    "@types/react": "npm:^19"
-    "@types/react-dom": "npm:^19"
+    "@types/react": "npm:^19.2.18"
+    "@types/react-dom": "npm:^19.2.4"
     "@vitejs/plugin-react": "npm:^6"
     lucide-react: "npm:^1.33.0"
     pixi.js: "npm:^8.0.0"
@@ -10940,34 +10933,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-router-dom@npm:^7.18.2":
-  version: 7.18.4
-  resolution: "react-router-dom@npm:7.18.4"
-  dependencies:
-    react-router: "npm:7.18.4"
-  peerDependencies:
-    react: ">=18"
-    react-dom: ">=18"
-  checksum: 10c0/b337acffb669fd977423e3ef2a0551a5d68c2447c718942b232cae367fd599723525e412b4ad0d08607189f962571dfc7ef0373d47fcf0ae301a860510e5e1f1
-  languageName: node
-  linkType: hard
-
-"react-router@npm:7.18.4":
-  version: 7.18.4
-  resolution: "react-router@npm:7.18.4"
-  dependencies:
-    cookie: "npm:^1.0.1"
-    set-cookie-parser: "npm:^2.6.0"
-  peerDependencies:
-    react: ">=18"
-    react-dom: ">=18"
-  peerDependenciesMeta:
-    react-dom:
-      optional: true
-  checksum: 10c0/352d103f9d738c7bf56cbb135c0d3d44e6325d15e360f58b6e844c1f5f8cbcd4ccb2de347f14e53984683fc237505a045633e9cb92c5457a1162dae054e08a32
-  languageName: node
-  linkType: hard
-
 "react-style-singleton@npm:^2.2.2, react-style-singleton@npm:^2.2.3":
   version: 2.2.3
   resolution: "react-style-singleton@npm:2.2.3"
@@ -11542,13 +11507,6 @@ __metadata:
   version: 0.0.1
   resolution: "server-only@npm:0.0.1"
   checksum: 10c0/4704f0ef85da0be981af6d4ed8e739d39bcfd265b9c246a684060acda5642d0fdc6daffc2308e71e2682c5f508090978802eae0a77623c9b90a49f9ae68048d6
-  languageName: node
-  linkType: hard
-
-"set-cookie-parser@npm:^2.6.0":
-  version: 2.7.2
-  resolution: "set-cookie-parser@npm:2.7.2"
-  checksum: 10c0/4381a9eb7ee951dfe393fe7aacf76b9a3b4e93a684d2162ab35594fa4053cc82a4d7d7582bf397718012c9adcf839b8cd8f57c6c42901ea9effe33c752da4a45
   languageName: node
   linkType: hard
 
@@ -12760,39 +12718,6 @@ __metadata:
   checksum: 10c0/e0e4a1ca27599c92a6ca4c32260e8a92e8a44f4ef6ef93f803f8ed823f486e0889fc0b93be4db59c8d51b3064951d25e43d434e95dc8c960cc3a63d65d00ba20
   languageName: node
   linkType: hard
-
-"workflows@workspace:apps/desktop/Workflows":
-  version: 0.0.0-use.local
-  resolution: "workflows@workspace:apps/desktop/Workflows"
-  dependencies:
-    "@eslint/js": "npm:^10"
-    "@productivity-os/canvas": "workspace:*"
-    "@productivity-os/shared-ui": "workspace:*"
-    "@productivity-os/workflow-plugin-sdk": "workspace:*"
-    "@tailwindcss/vite": "npm:^4"
-    "@tauri-apps/api": "npm:^2"
-    "@tauri-apps/cli": "npm:^2"
-    "@tauri-apps/plugin-clipboard-manager": "npm:^2.3.2"
-    "@tauri-apps/plugin-dialog": "npm:^2.7.2"
-    "@tauri-apps/plugin-opener": "npm:^2"
-    "@types/node": "npm:^24"
-    "@types/react": "npm:^19"
-    "@types/react-dom": "npm:^19"
-    "@vitejs/plugin-react": "npm:^6"
-    eslint: "npm:^10"
-    eslint-plugin-react-hooks: "npm:^7.1.1"
-    eslint-plugin-react-refresh: "npm:^0.5.2"
-    globals: "npm:^17"
-    lucide-react: "npm:^1.33.0"
-    pixi.js: "npm:^8.0.0"
-    react: "npm:^19.2.8"
-    react-dom: "npm:^19.2.8"
-    react-router-dom: "npm:^7.18.2"
-    typescript: "npm:~6"
-    typescript-eslint: "npm:^8"
-    vite: "npm:^8"
-  languageName: unknown
-  linkType: soft
 
 "wrap-ansi@npm:^6.2.0":
   version: 6.2.0

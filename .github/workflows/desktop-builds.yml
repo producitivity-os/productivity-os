@@ -1,0 +1,59 @@
+name: Desktop builds
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  notes:
+    uses: producitivity-os/Notes/.github/workflows/build-dmg.yml@main
+    with:
+      package_dmg: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit
+
+  nutrition:
+    uses: producitivity-os/Nutrition/.github/workflows/build-dmg.yml@main
+    with:
+      package_dmg: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit
+
+  quran:
+    uses: producitivity-os/Quran/.github/workflows/build-dmg.yml@main
+    with:
+      package_dmg: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit
+
+  reminders:
+    uses: producitivity-os/Reminders/.github/workflows/build-dmg.yml@main
+    with:
+      package_dmg: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit
+
+  revise:
+    uses: producitivity-os/Revise/.github/workflows/build-dmg.yml@main
+    with:
+      package_dmg: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [notes, nutrition, quran, reminders, revise]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download normalized DMGs
+        uses: actions/download-artifact@v5
+        with:
+          pattern: "*-macOS-universal"
+          path: release
+          merge-multiple: true
+      - name: Create or update the monorepo release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" || gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" release/*.dmg --repo "$GITHUB_REPOSITORY" --clobber

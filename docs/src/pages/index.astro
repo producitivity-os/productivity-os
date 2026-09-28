@@ -1,0 +1,148 @@
+---
+import "../styles/global.css";
+
+const releaseBase = "https://github.com/producitivity-os/productivity-os/releases/latest/download";
+const base = import.meta.env.BASE_URL.endsWith("/")
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
+
+const apps = [
+  {
+    name: "Notes",
+    description: "Shape ideas on an endless canvas, then turn them into connected notes.",
+    icon: "notes.png",
+    accent: "blue",
+    asset: "Notes-macOS-universal.dmg",
+  },
+  {
+    name: "Nutrition",
+    description: "Keep food and water tracking simple enough to become an everyday habit.",
+    icon: "nutrition.png",
+    accent: "cyan",
+    asset: "Nutrition-macOS-universal.dmg",
+  },
+  {
+    name: "Quran",
+    description: "Read attentively, keep your place, and make daily study feel unhurried.",
+    icon: "quran.png",
+    accent: "green",
+    asset: "Quran-macOS-universal.dmg",
+  },
+  {
+    name: "Reminders",
+    description: "Capture what matters and see the right task at the right moment.",
+    icon: "reminders.png",
+    accent: "orange",
+    asset: "Reminders-macOS-universal.dmg",
+  },
+  {
+    name: "Revise",
+    description: "Build durable knowledge through focused, lightweight spaced repetition.",
+    icon: "revise.png",
+    accent: "purple",
+    asset: "Revise-macOS-universal.dmg",
+  },
+  {
+    name: "Azkar",
+    description: "Keep daily remembrance close with a calm, focused mobile experience.",
+    icon: "azkar.png",
+    accent: "sand",
+    availability: "Mobile only",
+  },
+] as const;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta
+      name="description"
+      content="Productivity OS is a focused collection of independent tools for thinking, learning, and everyday life."
+    />
+    <meta name="theme-color" content="#0e1726" />
+    <link rel="icon" href={`${base}app-icons/notes.png`} />
+    <title>Productivity OS — Thoughtful tools for focused work</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href={base} aria-label="Productivity OS home">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span>Productivity OS</span>
+      </a>
+      <a class="source-link" href="https://github.com/producitivity-os/productivity-os">
+        View source <span aria-hidden="true">↗</span>
+      </a>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <p class="eyebrow">A small, open-source app family</p>
+        <h1 id="hero-title">Thoughtful tools for a more focused life.</h1>
+        <p class="intro">
+          Six independent apps for capturing ideas, building knowledge, and caring for the daily
+          rhythms that matter.
+        </p>
+        <div class="hero-actions">
+          <a class="primary-action" href="#apps">Explore the apps</a>
+          <span>Built for macOS · Azkar for mobile</span>
+        </div>
+      </section>
+
+      <section class="apps-section" id="apps" aria-labelledby="apps-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">The collection</p>
+            <h2 id="apps-title">Choose only what you need.</h2>
+          </div>
+          <p>Each app is intentionally focused, local-first, and useful on its own.</p>
+        </div>
+
+        <div class="app-grid">
+          {
+            apps.map((app) => (
+              <article class={`app-card accent-${app.accent}`}>
+                <div class="app-card-top">
+                  <img
+                    src={`${base}app-icons/${app.icon}`}
+                    alt=""
+                    width="64"
+                    height="64"
+                    loading="lazy"
+                  />
+                  <span class="platform">{"asset" in app ? "macOS" : app.availability}</span>
+                </div>
+                <div>
+                  <h3>{app.name}</h3>
+                  <p>{app.description}</p>
+                </div>
+                {"asset" in app ? (
+                  <a class="download-link" href={`${releaseBase}/${app.asset}`}>
+                    Download DMG <span aria-hidden="true">↓</span>
+                  </a>
+                ) : (
+                  <span class="coming-link">Mobile only</span>
+                )}
+              </article>
+            ))
+          }
+        </div>
+      </section>
+
+      <section class="closing" aria-labelledby="closing-title">
+        <p class="eyebrow">One shared principle</p>
+        <h2 id="closing-title">Software should make space for your attention.</h2>
+        <p>
+          Productivity OS favors clear interfaces, purposeful features, and tools that stay out of
+          the way once the work begins.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <span>Productivity OS</span>
+      <span>Open source · Built with care</span>
+    </footer>
+  </body>
+</html>

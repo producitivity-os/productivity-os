@@ -7,9 +7,9 @@ use app_core::{
     QuranRecordingMutation, QuranRecordingOrigin, QuranRecordingQuery, QuranRecordingSegment,
     QuranRecordingStatus, Reminder, ReminderImageAttachment, ReminderList, ReminderPriority,
     ReminderQuery, ReminderSubtask, ReminderView, ReplaceQuranRecordingRangeInput, SaveCanvasInput,
-    SaveCardTemplateInput, SavePersonInput, SaveQuranRecordingInput, SaveQuranRecordingReviewInput,
-    SaveReminderInput, SaveReminderListInput, StartStandaloneQuranRecordingInput,
-    UpdateReminderInput, WorkflowDocumentKind,
+    SaveCardTemplateInput, SaveCardTierPreviewInput, SavePersonInput, SaveQuranRecordingInput,
+    SaveQuranRecordingReviewInput, SaveReminderInput, SaveReminderListInput,
+    StartStandaloneQuranRecordingInput, UpdateReminderInput, WorkflowDocumentKind,
 };
 use sqlx::{
     QueryBuilder, Row, Sqlite, SqlitePool,
@@ -385,6 +385,13 @@ impl Database {
                 .bind(object.sort_index).bind(serde_json::to_string(&object.payload).expect("JSON values serialize"))
                 .execute(&mut *transaction).await?;
         }
+        sqlx::query(
+            "DELETE FROM card_tier_previews WHERE document_id=? AND card_id NOT IN (SELECT object_id FROM canvas_objects WHERE document_id=?)",
+        )
+        .bind(&input.id)
+        .bind(&input.id)
+        .execute(&mut *transaction)
+        .await?;
         let mut template_instances = Vec::new();
         for object in &canvas.objects {
             collect_template_instances(&object.payload, &mut template_instances);
@@ -462,6 +469,39 @@ impl Database {
             "INSERT INTO canvas_previews (document_id, data_url, updated_at) VALUES (?, ?, ?) \
              ON CONFLICT(document_id) DO UPDATE SET data_url=excluded.data_url, updated_at=excluded.updated_at",
         ).bind(id).bind(data_url).bind(now_millis()).execute(&self.pool).await?;
+        Ok(true)
+    }
+
+    pub async fn save_card_tier_previews(
+        &self,
+        previews: &[SaveCardTierPreviewInput],
+    ) -> Result<bool, DatabaseError> {
+        let Some(first) = previews.first() else {
+            return Ok(true);
+        };
+        if self.summary(&first.document_id).await?.is_none() {
+            return Ok(false);
+        }
+        let mut transaction = self.pool.begin().await?;
+        for preview in previews {
+            if preview.document_id != first.document_id || preview.card_id != first.card_id {
+                continue;
+            }
+            sqlx::query(
+                "INSERT INTO card_tier_previews (document_id, card_id, tier_id, tier_revision, data_url, updated_at) VALUES (?, ?, ?, ?, ?, ?) \
+                 ON CONFLICT(document_id, card_id, tier_id) DO UPDATE SET tier_revision=excluded.tier_revision, data_url=excluded.data_url, updated_at=excluded.updated_at \
+                 WHERE excluded.tier_revision >= card_tier_previews.tier_revision",
+            )
+            .bind(&preview.document_id)
+            .bind(&preview.card_id)
+            .bind(&preview.tier_id)
+            .bind(preview.tier_revision)
+            .bind(&preview.data_url)
+            .bind(now_millis())
+            .execute(&mut *transaction)
+            .await?;
+        }
+        transaction.commit().await?;
         Ok(true)
     }
 
@@ -2230,6 +2270,9 @@ fn migrate_legacy_card_value(
             }
         }
         serde_json::Value::Object(object) => {
+            if let Some(tiers) = object.get_mut("tiers") {
+                changed |= migrate_legacy_card_value(tiers, templates);
+            }
             if let Some(elements) = object.get_mut("elements") {
                 changed |= migrate_legacy_card_value(elements, templates);
             }
@@ -2240,20 +2283,108 @@ fn migrate_legacy_card_value(
                 .get("kind")
                 .and_then(serde_json::Value::as_str)
                 .map(str::to_owned);
-            match kind.as_deref() {
-                Some("revision") => {
-                    let data = serde_json::json!({
-                        "revisionKind": object.remove("revisionKind").unwrap_or_else(|| serde_json::json!("basic")),
-                        "front": object.remove("front").unwrap_or_else(|| serde_json::json!("Question")),
-                        "back": object.remove("back").unwrap_or_else(|| serde_json::json!("Answer")),
-                        "cloze": object.remove("cloze").unwrap_or_else(|| serde_json::json!("A {{c1::cloze}} hides part of a fact.")),
-                    });
-                    object.insert("kind".into(), serde_json::json!("plugin"));
-                    object.insert("pluginId".into(), serde_json::json!("notes.question-card"));
-                    object.insert("pluginVersion".into(), serde_json::json!(1));
-                    object.insert("pluginData".into(), data);
-                    changed = true;
+            let question_data = if kind.as_deref() == Some("revision") {
+                Some(serde_json::json!({
+                    "revisionKind": object.get("revisionKind").cloned().unwrap_or_else(|| serde_json::json!("basic")),
+                    "front": object.get("front").cloned().unwrap_or_else(|| serde_json::json!("Question")),
+                    "back": object.get("back").cloned().unwrap_or_else(|| serde_json::json!("Answer")),
+                    "cloze": object.get("cloze").cloned().unwrap_or_else(|| serde_json::json!("A {{c1::cloze}} hides part of a fact.")),
+                    "frontHeight": object.get("frontHeight").cloned(),
+                    "backHeight": object.get("backHeight").cloned(),
+                }))
+            } else if kind.as_deref() == Some("plugin")
+                && object.get("pluginId").and_then(serde_json::Value::as_str)
+                    == Some("notes.question-card")
+            {
+                object.get("pluginData").cloned()
+            } else {
+                None
+            };
+            if let Some(data) = question_data {
+                let width = object
+                    .get("width")
+                    .and_then(serde_json::Value::as_f64)
+                    .unwrap_or(280.0);
+                let base_height = object
+                    .get("height")
+                    .and_then(serde_json::Value::as_f64)
+                    .unwrap_or(160.0);
+                let front_height = data
+                    .get("frontHeight")
+                    .and_then(serde_json::Value::as_f64)
+                    .unwrap_or(base_height)
+                    .max(60.0);
+                let back_height = data
+                    .get("backHeight")
+                    .and_then(serde_json::Value::as_f64)
+                    .unwrap_or(base_height)
+                    .max(60.0);
+                let is_cloze =
+                    data.get("revisionKind").and_then(serde_json::Value::as_str) == Some("cloze");
+                let (front, back) = if is_cloze {
+                    legacy_cloze_tiers(
+                        data.get("cloze")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or_default(),
+                    )
+                } else {
+                    (
+                        data.get("front")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or_default()
+                            .to_owned(),
+                        data.get("back")
+                            .and_then(serde_json::Value::as_str)
+                            .unwrap_or_default()
+                            .to_owned(),
+                    )
+                };
+                let card_id = object
+                    .get("id")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or("card")
+                    .to_owned();
+                object.insert("kind".into(), serde_json::json!("canvas"));
+                object.insert("height".into(), serde_json::json!(front_height));
+                object.insert(
+                    "tiers".into(),
+                    serde_json::json!([
+                        legacy_text_tier(
+                            "front",
+                            "Front",
+                            &format!("{card_id}::front"),
+                            &front,
+                            width,
+                            front_height
+                        ),
+                        legacy_text_tier(
+                            "back",
+                            "Back",
+                            &format!("{card_id}::back"),
+                            &back,
+                            width,
+                            back_height
+                        ),
+                    ]),
+                );
+                for key in [
+                    "elements",
+                    "revisionKind",
+                    "front",
+                    "back",
+                    "cloze",
+                    "frontHeight",
+                    "backHeight",
+                    "clozeHeight",
+                    "pluginId",
+                    "pluginVersion",
+                    "pluginData",
+                ] {
+                    object.remove(key);
                 }
+                changed = true;
+            }
+            match kind.as_deref() {
                 Some("template") => {
                     let template_id = object
                         .get("templateId")
@@ -2286,10 +2417,108 @@ fn migrate_legacy_card_value(
                 }
                 _ => {}
             }
+            if object.get("tiers").is_none() {
+                let elements = object
+                    .remove("elements")
+                    .unwrap_or_else(|| serde_json::json!([]));
+                let tier_kind = object
+                    .get("kind")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or("canvas");
+                let width = object
+                    .get("width")
+                    .cloned()
+                    .unwrap_or_else(|| serde_json::json!(220));
+                let height = object
+                    .get("height")
+                    .cloned()
+                    .unwrap_or_else(|| serde_json::json!(140));
+                object.insert(
+                    "tiers".into(),
+                    serde_json::json!([{
+                        "id": "front",
+                        "name": "Front",
+                        "kind": tier_kind,
+                        "width": width,
+                        "height": height,
+                        "revision": 0,
+                        "elements": elements,
+                    }]),
+                );
+                changed = true;
+            }
         }
         _ => {}
     }
     changed
+}
+
+fn legacy_text_tier(
+    id: &str,
+    name: &str,
+    element_id: &str,
+    text: &str,
+    width: f64,
+    height: f64,
+) -> serde_json::Value {
+    serde_json::json!({
+        "id": id,
+        "name": name,
+        "kind": "canvas",
+        "width": width,
+        "height": height,
+        "revision": 1,
+        "elements": [{
+            "id": element_id,
+            "type": "text",
+            "x": 12,
+            "y": 12,
+            "width": (width - 24.0).max(80.0),
+            "height": (height - 24.0).max(36.0),
+            "text": text,
+            "format": "markdown",
+            "sizing": "fixed",
+            "fontSize": 18,
+            "lineHeight": 24,
+            "padding": 0,
+        }],
+    })
+}
+
+fn legacy_cloze_tiers(source: &str) -> (String, String) {
+    let mut prompt = String::new();
+    let mut answer = String::new();
+    let mut remaining = source;
+    while let Some(start) = remaining.find("{{c") {
+        prompt.push_str(&remaining[..start]);
+        answer.push_str(&remaining[..start]);
+        let after = &remaining[start + 3..];
+        let Some(separator) = after.find("::") else {
+            prompt.push_str(&remaining[start..]);
+            answer.push_str(&remaining[start..]);
+            return (prompt, answer);
+        };
+        let body = &after[separator + 2..];
+        let Some(close) = body.find("}}") else {
+            prompt.push_str(&remaining[start..]);
+            answer.push_str(&remaining[start..]);
+            return (prompt, answer);
+        };
+        let value = &body[..close];
+        let (revealed, hint) = value.split_once("::").unwrap_or((value, ""));
+        if hint.is_empty() {
+            prompt.push_str("[…]");
+        } else {
+            prompt.push('[');
+            prompt.push_str(hint);
+            prompt.push(']');
+        }
+        answer.push_str(revealed);
+        remaining = &body[close + 2..];
+    }
+    prompt.push_str(remaining);
+    answer.push_str(remaining);
+    (prompt, answer)
 }
 
 fn apply_legacy_template_values(
@@ -3224,10 +3453,45 @@ mod tests {
             .await
             .unwrap();
 
+        database
+            .save_card_tier_previews(&[SaveCardTierPreviewInput {
+                document_id: "wiki-revision".into(),
+                card_id: "question-1".into(),
+                tier_id: "front".into(),
+                tier_revision: 2,
+                data_url: "data:image/jpeg;base64,new".into(),
+            }])
+            .await
+            .unwrap();
+        database
+            .save_card_tier_previews(&[SaveCardTierPreviewInput {
+                document_id: "wiki-revision".into(),
+                card_id: "question-1".into(),
+                tier_id: "front".into(),
+                tier_revision: 1,
+                data_url: "data:image/jpeg;base64,stale".into(),
+            }])
+            .await
+            .unwrap();
+        let stored_preview = sqlx::query(
+            "SELECT tier_revision, data_url FROM card_tier_previews WHERE document_id=? AND card_id=? AND tier_id=?",
+        )
+        .bind("wiki-revision")
+        .bind("question-1")
+        .bind("front")
+        .fetch_one(&database.pool)
+        .await
+        .unwrap();
+        assert_eq!(stored_preview.get::<i64, _>("tier_revision"), 2);
+        assert_eq!(
+            stored_preview.get::<String, _>("data_url"),
+            "data:image/jpeg;base64,new"
+        );
+
         let decks = database.list_revision_decks().await.unwrap();
         assert_eq!(
             (decks[0].total_count, decks[0].due_count, decks[0].new_count),
-            (1, 1, 1)
+            (2, 2, 2)
         );
         let cards = database
             .list_revision_cards(&app_core::RevisionCardQuery {
@@ -3236,8 +3500,12 @@ mod tests {
             })
             .await
             .unwrap();
-        assert_eq!(cards.len(), 1);
-        assert_eq!(cards[0].sources[0].label, "Water");
+        assert_eq!(cards.len(), 2);
+        let question = cards
+            .iter()
+            .find(|card| card.card_id == "question-1")
+            .unwrap();
+        assert_eq!(question.sources[0].label, "Water");
         let initialized = database
             .start_revision_session(&app_core::StartRevisionSessionInput {
                 id: "revision-session-atomic".into(),
@@ -3253,7 +3521,7 @@ mod tests {
                 initialized.session.total_cards,
                 initialized.session.remaining_cards,
             ),
-            (1, 1)
+            (2, 2)
         );
         let reviewed = database
             .review_revision_session_card(&app_core::ReviewRevisionSessionCardInput {
@@ -3272,7 +3540,7 @@ mod tests {
         assert!(scheduled.due_at > scheduled.last_review_at);
         assert_eq!(
             reviewed.session.status,
-            app_core::RevisionSessionStatus::Completed
+            app_core::RevisionSessionStatus::Running
         );
         assert_eq!(reviewed.session.right_count, 1);
         assert_eq!(reviewed.session.results.len(), 1);
@@ -3311,9 +3579,16 @@ mod tests {
             .list_revision_cards(&app_core::RevisionCardQuery::default())
             .await
             .unwrap();
-        assert_eq!(unlinked.len(), 1);
-        assert!(unlinked[0].sources.is_empty());
-        assert_eq!(unlinked[0].review_count, 1);
+        assert_eq!(unlinked.len(), 2);
+        assert!(unlinked.iter().all(|card| card.sources.is_empty()));
+        assert_eq!(
+            unlinked
+                .iter()
+                .find(|card| card.card_id == "question-1")
+                .unwrap()
+                .review_count,
+            1
+        );
         database
             .save_canvas(SaveCanvasInput {
                 id: "wiki-revision".into(),
@@ -3333,7 +3608,14 @@ mod tests {
             .list_revision_cards(&app_core::RevisionCardQuery::default())
             .await
             .unwrap();
-        assert_eq!(cards[0].review_count, 1);
+        assert_eq!(
+            cards
+                .iter()
+                .find(|card| card.card_id == "question-1")
+                .unwrap()
+                .review_count,
+            1
+        );
 
         database.pool.close().await;
         std::fs::remove_file(&path).ok();
@@ -3420,12 +3702,8 @@ mod tests {
         assert!(
             default_plugins
                 .iter()
-                .any(|item| item.plugin_id == "notes.question-card" && item.installed)
+                .all(|item| item.plugin_id != "notes.question-card")
         );
-        database
-            .set_plugin_installed("notes.question-card", false)
-            .await
-            .unwrap();
         database.pool.close().await;
 
         let reopened = Database::open(&path, 1, 1_000).await.unwrap();
@@ -3435,7 +3713,7 @@ mod tests {
                 .await
                 .unwrap()
                 .iter()
-                .any(|item| item.plugin_id == "notes.question-card" && !item.installed)
+                .all(|item| item.plugin_id != "notes.question-card")
         );
         reopened.pool.close().await;
         std::fs::remove_file(&path).ok();
@@ -4276,8 +4554,11 @@ mod tests {
         assert!(migrate_legacy_card_value(&mut template, &templates));
         assert_eq!(template["id"], "card-unchanged");
         assert_eq!(template["kind"], "canvas");
-        assert_eq!(template["elements"][0]["id"], "card-unchanged::label");
-        assert_eq!(template["elements"][0]["text"], "Ada");
+        assert_eq!(
+            template["tiers"][0]["elements"][0]["id"],
+            "card-unchanged::label"
+        );
+        assert_eq!(template["tiers"][0]["elements"][0]["text"], "Ada");
         assert!(template.get("templateId").is_none());
 
         let mut revision = json!({
@@ -4286,8 +4567,27 @@ mod tests {
         });
         assert!(migrate_legacy_card_value(&mut revision, &HashMap::new()));
         assert_eq!(revision["id"], "question-unchanged");
-        assert_eq!(revision["pluginId"], "notes.question-card");
-        assert_eq!(revision["pluginData"]["front"], "Front");
+        assert_eq!(revision["kind"], "canvas");
+        assert_eq!(revision["tiers"][0]["name"], "Front");
+        assert_eq!(revision["tiers"][0]["elements"][0]["text"], "Front");
+        assert_eq!(revision["tiers"][1]["elements"][0]["text"], "Back");
+        assert!(!migrate_legacy_card_value(&mut revision, &HashMap::new()));
+
+        let mut cloze = json!({
+            "id": "cloze-unchanged", "type": "card", "kind": "revision", "revisionKind": "cloze",
+            "front": "", "back": "", "cloze": "Water {{c1::freezes::temperature}} at {{c2::zero}}.", "elements": []
+        });
+        assert!(migrate_legacy_card_value(&mut cloze, &HashMap::new()));
+        assert_eq!(cloze["id"], "cloze-unchanged");
+        assert_eq!(
+            cloze["tiers"][0]["elements"][0]["text"],
+            "Water [temperature] at […]."
+        );
+        assert_eq!(
+            cloze["tiers"][1]["elements"][0]["text"],
+            "Water freezes at zero."
+        );
+        assert!(!migrate_legacy_card_value(&mut cloze, &HashMap::new()));
     }
 
     #[tokio::test]

@@ -371,6 +371,11 @@ async fn handle_request(
                 Err(error) => Err(error.into()),
             }
         }
+        Request::SaveCardTierPreviews { previews } => database
+            .save_card_tier_previews(&previews)
+            .await
+            .map(Response::Seeded)
+            .map_err(Into::into),
         Request::SeedCanvases { inputs } => database
             .seed_canvases_once(inputs)
             .await

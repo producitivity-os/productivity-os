@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const DATA_SERVICE_PROTOCOL_VERSION: u32 = 18;
+pub const DATA_SERVICE_PROTOCOL_VERSION: u32 = 19;
 pub const CARD_TEMPLATE_PROTOCOL_VERSION: u32 = 2;
 pub const REVISION_PROTOCOL_VERSION: u32 = 6;
-pub const NOTES_PROTOCOL_VERSION: u32 = 18;
+pub const NOTES_PROTOCOL_VERSION: u32 = 19;
 pub const PLUGIN_PROTOCOL_VERSION: u32 = 11;
 
 pub const QURAN_SURAH_AYAH_COUNTS: [u16; 114] = [
@@ -979,6 +979,25 @@ pub struct RevisionSourceReference {
     pub label: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RevisionCardTier {
+    pub id: String,
+    pub name: String,
+    pub content: String,
+    pub preview_data_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveCardTierPreviewInput {
+    pub document_id: String,
+    pub card_id: String,
+    pub tier_id: String,
+    pub tier_revision: i64,
+    pub data_url: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RevisionCard {
@@ -991,6 +1010,8 @@ pub struct RevisionCard {
     pub front: String,
     pub back: String,
     pub cloze: String,
+    #[serde(default)]
+    pub tiers: Vec<RevisionCardTier>,
     pub sources: Vec<RevisionSourceReference>,
     pub due_at: i64,
     pub last_review_at: Option<i64>,
@@ -1429,6 +1450,9 @@ pub enum Request {
     SaveCanvasPreview {
         id: String,
         data_url: String,
+    },
+    SaveCardTierPreviews {
+        previews: Vec<SaveCardTierPreviewInput>,
     },
     SeedCanvases {
         inputs: Vec<SaveCanvasInput>,
